@@ -12,7 +12,6 @@ def select_dataset():
         return None
         
     print("\n=== Available Datasets ===")
-    # Sort them so the newest timestamps appear at the bottom
     available_dirs.sort() 
     for i, d in enumerate(available_dirs):
         print(f"[{i+1}] {d}")
@@ -66,7 +65,6 @@ def view_frame():
             print(f"ERROR: Could not find file at -> {file_path}")
             continue
 
-        # Parse the labels.csv to check attack status and get the ghost file
         is_spoofed = False
         ghost_coords = None
         ghost_file = "None"
@@ -79,7 +77,6 @@ def view_frame():
                         if row['Status'] == 'Spoofed':
                             is_spoofed = True
                             ghost_coords = (float(row['Ghost_Center_X']), float(row['Ghost_Center_Y']), float(row['Ghost_Center_Z']))
-                            # Use .get() to avoid crashing on older datasets that lack this column
                             ghost_file = row.get('Ghost_Points_File', 'None')
                         break
         else:
@@ -91,11 +88,9 @@ def view_frame():
         fig = plt.figure(figsize=(10, 10))
         ax = fig.add_subplot(111, projection='3d')
 
-        # Plot the main environment (downsampled to prevent AnyDesk lag)
         ax.scatter(main_data[::5, 0], main_data[::5, 1], main_data[::5, 2], 
                    s=0.5, c=main_data[::5, 2], cmap='viridis', alpha=0.5)
 
-        # Plot the exact points of the spoofed vehicle
         if is_spoofed:
             if ghost_file != "None":
                 ghost_path = os.path.join(BASE_DIR, seq_folder, ghost_file)
@@ -103,13 +98,11 @@ def view_frame():
                     ghost_data = np.load(ghost_path)
                     print(f"Loaded {len(ghost_data)} isolated ghost points.")
                     
-                    # Plot the ghost points in solid bright red, slightly larger
                     ax.scatter(ghost_data[:, 0], ghost_data[:, 1], ghost_data[:, 2], 
                                color='red', s=5, label='Spoofed Vehicle Points')
                 else:
                     print(f"Warning: Could not find ghost point file -> {ghost_file}")
 
-            # Add floating text over the attack location
             if ghost_coords:
                 gx, gy, gz = ghost_coords
                 ax.text(gx, gy, gz + 4, "SPOOFED ATTACK", color='red', fontsize=12, fontweight='bold', ha='center')
@@ -119,7 +112,6 @@ def view_frame():
         else:
             title_status = "[STATUS: CLEAN FRAME]"
 
-        # Lock the axes to the 50m LiDAR range
         ax.set_xlim3d([-50, 50])
         ax.set_ylim3d([-50, 50])
         ax.set_zlim3d([-5, 20])
