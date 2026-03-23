@@ -56,7 +56,6 @@ def get_ego_relative_bbox(vehicle, lidar_transform, ego_velocity, is_ghost=False
     rel_vy = dvx * math.sin(yaw_rad) + dvy * math.cos(yaw_rad)
     rel_vy = -rel_vy 
 
-    # 1.0 for Background Traffic, 2.0 for Spoofed Ghost
     c = 2.0 if is_ghost else 1.0
 
     return [rel_x, rel_y, rel_z, l, w, h, rel_yaw, rel_vx, rel_vy, c]
@@ -68,21 +67,17 @@ def save_worker(save_queue, stop_event):
             seq_folder = os.path.join(BASE_DIR, f"Sequence_{seq_idx:02d}")
             os.makedirs(seq_folder, exist_ok=True)
             
-            # Save Full Point Cloud
             filename = f"snapshot_{snap_idx:03d}.npy"
             np.save(os.path.join(seq_folder, filename), data)
 
-            # Save Bounding Boxes
             bbox_filename = f"bboxes_{snap_idx:03d}.npy"
             np.save(os.path.join(seq_folder, bbox_filename), bboxes)
 
-            # Save Ghost Points (If active)
             ghost_filename = "None"
             if is_spoofed and ghost_points is not None and len(ghost_points) > 0:
                 ghost_filename = f"snapshot_{snap_idx:03d}_ghost.npy"
                 np.save(os.path.join(seq_folder, ghost_filename), ghost_points)
             
-            # Append to labels.csv
             csv_path = os.path.join(seq_folder, "labels.csv")
             file_exists = os.path.exists(csv_path)
             
@@ -184,7 +179,6 @@ def main():
             ghost_points = None
 
             if is_spoofed:
-                # The geocage mask extracts points around the static ATTACK_DISTANCE spawn
                 x_min, x_max = ATTACK_DISTANCE - 2.5, ATTACK_DISTANCE + 2.5
                 y_min, y_max = -1.5, 1.5
                 z_min, z_max = -2.5, 0.5 
@@ -195,7 +189,6 @@ def main():
                 
                 ghost_points = snapshot_data[mask]
 
-            # Send payload to background saving thread
             save_queue.put((
                 state['current_sequence'], 
                 state['current_snapshot'], 
@@ -256,7 +249,6 @@ def main():
                 is_ghost = (state['ghost_actor'] is not None) and (v.id == state['ghost_actor'].id)
                 bbox = get_ego_relative_bbox(v, lidar_trans, ego_vel, is_ghost)
                 
-                # Filter out vehicles beyond 50m LiDAR range
                 dist = math.sqrt(bbox[0]**2 + bbox[1]**2 + bbox[2]**2)
                 if dist <= 50.0:
                     current_bboxes.append(bbox)
