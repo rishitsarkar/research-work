@@ -8,12 +8,10 @@ import random
 import csv
 from datetime import datetime
 
-# --- DATASET CONFIGURATION ---
 TOTAL_SEQUENCES = 50
 SNAPSHOTS_PER_SEQUENCE = 200
 FRAMES_PER_SNAPSHOT = 2  # 100ms
 
-# DYNAMIC FOLDER: Automatically appends the timestamp to prevent overwriting
 RUN_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 BASE_DIR = f"LiDAR_Dataset_Run_{RUN_TIMESTAMP}"
 
@@ -29,31 +27,25 @@ def save_worker(save_queue, stop_event):
     """
     while not stop_event.is_set() or not save_queue.empty():
         try:
-            # Unpack the payload
             seq_idx, snap_idx, data, is_spoofed, ghost_xyz, ghost_points = save_queue.get(timeout=1.0)
             
-            # Create sequence folder
             seq_folder = os.path.join(BASE_DIR, f"Sequence_{seq_idx:02d}")
             os.makedirs(seq_folder, exist_ok=True)
             
-            # 1. Save the FULL point cloud snapshot
             filename = f"snapshot_{snap_idx:03d}.npy"
             np.save(os.path.join(seq_folder, filename), data)
 
-            # 2. Save the ISOLATED ghost points (if the attack is active)
             ghost_filename = "None"
             if is_spoofed and ghost_points is not None and len(ghost_points) > 0:
                 ghost_filename = f"snapshot_{snap_idx:03d}_ghost.npy"
                 np.save(os.path.join(seq_folder, ghost_filename), ghost_points)
             
-            # 3. Append to the labels.csv file
             csv_path = os.path.join(seq_folder, "labels.csv")
             file_exists = os.path.exists(csv_path)
             
             with open(csv_path, 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 if snap_idx == 1 and not file_exists:
-                    # Upgraded CSV Header
                     writer.writerow(["Snapshot_File", "Status", "Ghost_Center_X", "Ghost_Center_Y", "Ghost_Center_Z", "Ghost_Points_File"])
                 
                 status = "Spoofed" if is_spoofed else "Clean"
@@ -141,8 +133,7 @@ def main():
             is_spoofed = state['ghost_actor'] is not None
             ghost_points = None
 
-            # --- THE GEOCAGE EXTRACTOR ---
-            # If the attack is active, slice out only the points that hit the ghost car
+           
             if is_spoofed:
                 # Bounding box limits relative to the LiDAR
                 x_min, x_max = ATTACK_DISTANCE - 2.5, ATTACK_DISTANCE + 2.5
