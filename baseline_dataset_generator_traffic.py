@@ -159,11 +159,9 @@ def main():
         
         state['frame_buffer'].append(xyz_points)
 
-        # Process a full 100ms snapshot
         if len(state['frame_buffer']) == FRAMES_PER_SNAPSHOT:
             snapshot_data = np.concatenate(state['frame_buffer'], axis=0)
 
-            # Send everything to the background saving thread
             save_queue.put((
                 state['current_sequence'], 
                 state['current_snapshot'], 
@@ -179,7 +177,6 @@ def main():
             
             state['current_snapshot'] += 1
 
-            # Sequence Rollover
             if state['current_snapshot'] > SNAPSHOTS_PER_SEQUENCE:
                 print(f"--- Completed Sequence {state['current_sequence']:02d} ---")
                 state['current_sequence'] += 1
@@ -195,7 +192,6 @@ def main():
     print("-------------------------------------------------------------------------")
 
     try:
-        # MAIN THREAD: Handles ticking and ground-truth extraction
         while not state['finished']:
             world.wait_for_tick()
             
